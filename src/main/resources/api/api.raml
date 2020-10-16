@@ -1,0 +1,109 @@
+#%RAML 1.0
+title: insurance-gateway
+
+/status:
+   get: 
+    responses:
+      200: 
+        body:
+          application/json: 
+            example:             
+                 {
+                   "availableThreads" : 5
+                 } 
+/users: 
+  get: 
+    responses:
+      200: 
+        body:
+          application/json: 
+            example: 
+                [             
+                  {
+                    "id" : 5,
+                    "firstName" : "Cristofor",
+                    "lastName" : "Columb", 
+                    "email": "discovernewland@gmail.com",
+                    "birthDate" : "1989-09-25T21:00:00.000+00:00"
+                  } 
+                ]
+  post: 
+    responses:
+      201: 
+        body:
+          application/json: 
+            example:              
+                {
+                  "response" : "User created!"
+                }   
+  /{id}:
+    get: 
+      responses:
+        200: 
+          body:
+            application/json: 
+              example:              
+                   {
+                    "id" : 5,
+                    "firstName" : "Cristofor",
+                    "lastName" : "Columb", 
+                    "email": "discovernewland@gmail.com",
+                    "birthDate" : "1989-09-25T21:00:00.000+00:00"
+                    } 
+    put: 
+      responses:
+        200: 
+          body:
+            application/json: 
+              example:              
+                  {
+                    "response" : "User updated!"
+                  }
+    delete: 
+      responses:
+        204: 
+    /insurances:
+      get: 
+        responses:
+          200: 
+            body:
+              application/json: 
+                example:  
+                    [            
+                      {
+                        "id" : 5, 
+                      }
+                    ] 
+      post: 
+       responses:
+         201: 
+           body:
+             application/json: 
+               example:              
+                   {
+                     "response" : "Insurance created!"
+                   }   
+      /{id}:
+        get: 
+          responses:
+            200: 
+              body:
+                application/json: 
+                  example:              
+                       {
+                        "id" : 5,
+                        
+                       } 
+        put: 
+          responses:
+            200: 
+              body:
+                application/json: 
+                  example:              
+                      {
+                        "response" : "Insurance updated!"
+                      } 
+        delete: 
+          responses:
+            204: 
+    
