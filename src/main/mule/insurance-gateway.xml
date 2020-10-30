@@ -1,29 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:sockets="http://www.mulesoft.org/schema/mule/sockets"
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:sockets="http://www.mulesoft.org/schema/mule/sockets"
 	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:circuit-breaker="http://www.mulesoft.org/schema/mule/circuit-breaker"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:circuit-breaker="http://www.mulesoft.org/schema/mule/circuit-breaker"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/circuit-breaker http://www.mulesoft.org/schema/mule/circuit-breaker/current/mule-circuit-breaker.xsd
 http://www.mulesoft.org/schema/mule/sockets http://www.mulesoft.org/schema/mule/sockets/current/mule-sockets.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<circuit-breaker:config name="Circuit_breaker_Config" doc:name="Circuit-breaker Config" doc:id="136545ff-f2c9-488c-a5b4-d871c64caea9" threshold="4" timeout="30000" breakerName="default-braker"/>
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8a5fdeb9-9c40-4bf7-87dc-46138c5d8e8d" >
-		<http:request-connection host="localhost" port="8099" />
+		<http:request-connection host="localhost" port="8080" />
 	</http:request-config>
 	<flow name="insurance-gatewayFlow" doc:id="1387ca78-2a60-4ade-b030-79c82e74e7bc" >
 		<circuit-breaker:filter doc:name="Filter Circuit Breaker" doc:id="10385ef9-68f6-48f9-9750-c7a27d7023e6" config-ref="Circuit_breaker_Config"/>
-		<http:request method="POST" doc:name="Create consent" doc:id="9c72d544-7b1b-43f4-aa0c-1eecab66dcc2" config-ref="HTTP_Request_configuration" path="/consents" />
-		<round-robin doc:name="Round Robin" doc:id="08771922-4f31-4651-9680-118d1f73d28d" >
-			<route >
-				<logger level="INFO" doc:name="Logger" doc:id="26f12865-61a2-44b0-b1ba-5d2546e356bf" message="Route 1 "/>
-			</route>
-			<route >
-				<logger level="INFO" doc:name="Logger" doc:id="9106acec-7d6e-421f-a969-51801b7b63e2" message="Route 2 "/>
-			</route>
-		</round-robin>
+		<os:retrieve doc:name="Retrieve Service Registry" doc:id="3c2e11a8-1c20-465f-959e-bc992f8f7a6f" key="serviceRegistry" objectStore="ServiceRegistry" target="serviceRegistry">
+		</os:retrieve>
+		<os:retrieve doc:name="Retrieve Service Index from Registry" doc:id="75f7bf77-9109-4a5e-9220-b4798aa97e53" key="serviceIndex" objectStore="ServiceRegistry" target="serviceIndex">
+			<os:default-value ><![CDATA[0]]></os:default-value>
+		</os:retrieve>
+		<ee:transform doc:name="Transform Message" doc:id="291e4e6f-5209-41db-86c8-0c1f26d9ae72" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="url" ><![CDATA[%dw 2.0
+output application/java
+---
+("http://" ++ vars.serviceRegistry[vars.serviceIndex as Number].host ++ ":" ++ vars.serviceRegistry[vars.serviceIndex as Number].port ++ attributes.relativePath) as String]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="#[attributes.method]" doc:name="Call Process API" doc:id="9c72d544-7b1b-43f4-aa0c-1eecab66dcc2" config-ref="HTTP_Request_configuration" url='#[vars.url]'>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"priority" : 3
+}]]]></http:headers>
+		</http:request>
+		<os:store doc:name="Update Service Index" doc:id="dc786002-9a0c-4115-a705-958c248c54cc" key="serviceIndex" objectStore="ServiceRegistry">
+			<os:value ><![CDATA[#[output application/java --- if (vars.serviceIndex as Number == (sizeOf(vars.serviceRegistry) - 1)) 0 else (vars.serviceIndex as Number + 1)]]]></os:value>
+		</os:store>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="15006555-2597-4690-96cf-de0fc2c45004" >
 				<circuit-breaker:record-failure doc:name="Record failure" doc:id="062aac5f-53af-4d07-9ba5-b85db3ce0df6" config-ref="Circuit_breaker_Config" />

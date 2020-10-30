@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd ">
+<mule xmlns:sockets="http://www.mulesoft.org/schema/mule/sockets" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/sockets http://www.mulesoft.org/schema/mule/sockets/current/mule-sockets.xsd">
     <http:listener-config name="api-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
     <apikit:config name="api-config" api="api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
-    <flow name="api-main">
-        <http:listener config-ref="api-httpListenerConfig" path="/api/*">
+    <os:object-store name="CacheOS" doc:name="Object store" doc:id="07427579-6309-4ff5-870c-98d086bb7252" entryTtl="10"/>
+	<sockets:request-config name="Sockets_Request_config" doc:name="Sockets Request config" doc:id="ca9a29b4-d740-46ac-9193-73958e1c2f8b" >
+		<sockets:tcp-requester-connection host="localhost" port="5000" >
+			<sockets:protocol >
+				<sockets:direct-protocol />
+			</sockets:protocol>
+		</sockets:tcp-requester-connection>
+	</sockets:request-config>
+	<os:object-store name="ServiceRegistry" doc:name="Object store" doc:id="eaa44a41-e617-458c-b21f-665f12e6b24d" persistent="false"/>
+	<flow name="api-main">
+        <http:listener config-ref="api-httpListenerConfig" path="/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:response>
@@ -14,8 +26,8 @@
                 <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:error-response>
         </http:listener>
-        <apikit:router config-ref="api-config" />
-        <error-handler>
+		<apikit:router config-ref="api-config" />
+		<error-handler>
             <on-error-propagate type="APIKIT:BAD_REQUEST">
                 <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
                     <ee:message>
@@ -124,103 +136,24 @@ output application/json
         </error-handler>
     </flow>
     <flow name="put:\users\(id)\insurances\(id):api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  response: "Insurance updated!"
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="b9dbe13e-2b30-438b-8d18-efdfad27566c" name="insurance-gatewayFlow" />
     </flow>
     <flow name="put:\users\(id):api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  response: "User updated!"
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="d97425ae-3c8d-4177-8380-2703fd5a3396" name="insurance-gatewayFlow" />
     </flow>
     <flow name="delete:\users\(id):api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message="delete:\users\(id):api-config" />
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="02d19abc-4f04-490f-8f7a-c743a6c7e290" name="insurance-gatewayFlow" />
     </flow>
     <flow name="delete:\users\(id)\insurances\(id):api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message="delete:\users\(id)\insurances\(id):api-config" />
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="546169d6-1558-40b3-aeb0-83c26c8d3ca8" name="insurance-gatewayFlow" />
     </flow>
     <flow name="get:\users\(id)\insurances:api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  id: 5
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="a59e9cc3-c748-476c-9f9b-d22a9004193d" name="insurance-gatewayFlow" />
     </flow>
     <flow name="get:\status:api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  availableThreads: 5
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="d4cd53eb-51f5-4ef9-8001-e82156be9ef0" name="insurance-gatewayFlow" />
     </flow>
     <flow name="get:\users:api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-[
-  {
-    id: 5,
-    firstName: "Cristofor",
-    lastName: "Columb",
-    email: "discovernewland@gmail.com",
-    birthDate: "1989-09-25T21:00:00.000+00:00"
-  }
-]]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
 		<flow-ref doc:name="insurance-gatewayFlow" doc:id="321d0836-21a9-4559-a312-ae9dd26765fe" name="insurance-gatewayFlow"/>
     </flow>
     <flow name="get:\users\(id):api-config">
@@ -229,20 +162,52 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+		<os:retrieve doc:name="retrieve getUserById cache record" doc:id="fd05a583-df67-46f1-b811-d58c7b4e595c" key='#["getUserById" ++ vars.id]' objectStore="CacheOS" target="cacheRecord">
+			<os:default-value><![CDATA[0]]></os:default-value>
+		</os:retrieve>
+		<choice doc:name="Choice" doc:id="150b313e-5bbb-4e91-9840-d519536dcaa7">
+			<when expression='#[vars.cacheRecord != "0"]'>
+				<logger level="INFO" doc:name="Cache record exists!" doc:id="0690954b-be15-4aa6-8c73-ae5da27c3a27" message="Cache record exists! Proceeding to return cached value..." />
+				<ee:transform doc:name="Prepare cache retrieval" doc:id="15cd0127-fa1a-4257-b9f9-9d1dbff6be0d">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+'{"expects": "users", "id": ' ++ vars.id ++ '}']]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<sockets:send-and-receive doc:name="Get from cache over tcp" doc:id="1e7df27c-d3c6-48f3-a45e-f85cecd6eb48" config-ref="Sockets_Request_config" outputMimeType="text/plain">
+				</sockets:send-and-receive>
+				<logger level="INFO" doc:name="Cache record retrieved!!!" doc:id="436aebbf-9384-43eb-be60-d3a51dbf3e78" message="Cache record retrieved!!!" />
+				<set-payload value="#[payload]" doc:name="Set MIME type to json" doc:id="d4c1803a-1530-4e59-89bd-0c3dc7f26a30" mimeType="application/json" />
+				<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:name="Set response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{
-  id: 5,
-  firstName: "Cristofor",
-  lastName: "Columb",
-  email: "discovernewland@gmail.com",
-  birthDate: "1989-09-25T21:00:00.000+00:00"
-}]]></ee:set-payload>
+payload[0]]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Cache record does not exist!" doc:id="5c5ada5a-286e-48b8-8502-f1594e486ba3" message="Cache record does not exist!" />
+				<flow-ref doc:name="Forward request to service" doc:id="635f3ace-f7b0-490a-9b40-810e75eca413" name="insurance-gatewayFlow" />
+				<set-variable value="#[payload]" doc:name="Save service response!" doc:id="07db8d17-efae-4f35-a79b-2189957059e7" variableName="requestResult" />
+				<sockets:send-and-receive doc:name="Store in cache over tcp" doc:id="57e6fdb8-d35a-4717-83dc-bcdf531c5588" config-ref="Sockets_Request_config" />
+				<logger level="INFO" doc:name="Cache record stored!!!" doc:id="ecd69432-a82a-43f9-9d1a-043ea7169410" message="Cache record stored!!!" />
+				<os:store doc:name="store getUserById cache record" doc:id="223e6f0d-3eb2-4d27-bf91-afb26ca70e7d" key='#["getUserById" ++ vars.id]' objectStore="CacheOS">
+					<os:value><![CDATA[1]]></os:value>
+				</os:store>
+				<ee:transform doc:name="Set response" doc:id="ca74d5a0-4f07-43d8-8157-96d851ba2fa2">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.requestResult]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
     </flow>
     <flow name="get:\users\(id)\insurances\(id):api-config">
         <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
@@ -251,44 +216,77 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+		<os:retrieve doc:name="retrieve getInsuranceById cache record" doc:id="0dd52d52-9a75-423a-a140-0a9071af0714" key='#["getInsuranceById" ++ vars.id]' objectStore="CacheOS" target="cacheRecord" >
+			<os:default-value ><![CDATA[0]]></os:default-value>
+		</os:retrieve>
+		<choice doc:name="Choice" doc:id="77a36d74-b8d3-4b2a-a694-f0207de449a8" >
+			<when expression='#[vars.cacheRecord != "0"]' >
+				<logger level="INFO" doc:name="Cache record exists!" doc:id="2ebedfe8-997a-4476-a38d-f57e54158899" message="Cache record exists! Proceeding to return cached value..." />
+				<ee:transform doc:name="Prepare cache retrieval" doc:id="7b0dfd71-785e-49f5-b699-4ebf82f2a3df" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output text/plain
+---
+'{"expects": "insurances", "id": ' ++ vars.id ++ '}']]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<sockets:send-and-receive doc:name="Get from cache over tcp" doc:id="ce7d8b6d-c9b7-4f6c-904b-adda170ab518" config-ref="Sockets_Request_config" outputMimeType="text/plain" />
+				<logger level="INFO" doc:name="Cache record retrieved!!!" doc:id="132ab989-1019-48e9-8572-44b6c3d309f6" message="Cache record retrieved!!!" />
+				<set-payload value="#[payload]" doc:name="Set MIME type to json" doc:id="bf5b5f4a-4a52-42cb-82d9-1f15fc59c483" mimeType="application/json" />
+				<ee:transform doc:name="Set response" doc:id="e75041c7-0b95-4f16-bb85-02e6ebb127cf" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-{
-  id: 5
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+payload[0]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Cache record does not exist!" doc:id="36cf21b3-4bbb-4daa-87bf-7e1d1c85b56c" message="Cache record does not exist!" />
+				<flow-ref doc:name="Forward request to service" doc:id="d9b5cce9-145c-4b30-9030-612f39bed8c9" name="insurance-gatewayFlow" />
+				<set-variable value="#[payload]" doc:name="Save service response!" doc:id="9530b506-85a0-448f-a701-f4ce5c064928" variableName="requestResult" />
+				<sockets:send-and-receive doc:name="Store in cache over tcp" doc:id="98f7b371-4f95-4813-b26c-84ba930860ea" config-ref="Sockets_Request_config" />
+				<logger level="INFO" doc:name="Cache record stored!!!" doc:id="e8b7fd5f-7899-4193-96ab-342b2ccfd04b" message="Cache record stored!!!" />
+				<os:store doc:name="store getInsuranceById cache record" doc:id="98b7997d-f697-4643-a09c-4d8fb70c241c" key='#["getInsuranceById" ++ vars.id]' objectStore="CacheOS" >
+					<os:value ><![CDATA[1]]></os:value>
+				</os:store>
+				<ee:transform doc:name="Set response" doc:id="3603be5e-9a4b-4da7-9911-d2ff2709b80b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.requestResult]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
     </flow>
     <flow name="post:\users\(id)\insurances:api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  response: "Insurance created!"
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="9fa3bec7-7e16-4ef3-872d-54c8a268728b" name="insurance-gatewayFlow" />
     </flow>
     <flow name="post:\users:api-config">
-        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+		<flow-ref doc:name="Copy_of_Forward request to service" doc:id="2ff67f3c-aa74-4b24-91aa-8438c285d968" name="insurance-gatewayFlow" />
+    </flow>
+	<flow name="post:\register:api-config" doc:id="c60414a2-39f2-42dc-b6f1-52c8ca076a7f" >
+		<logger level="INFO" doc:name="Logger" doc:id="5233a6b4-4b97-4be9-aaa2-0b4dae4d9951" message='#[payload]'/>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="5bb561f4-7ee6-435a-9bbb-f7cce3e3e85f" mimeType="application/json"/>
+		<os:retrieve doc:name="Retrieve Service Registry" doc:id="e79b3c98-8b5c-46d9-9d82-b606268630e2" key="serviceRegistry" target="serviceRegistry" objectStore="ServiceRegistry">
+			<os:default-value ><![CDATA[#[[]]]]></os:default-value>
+		</os:retrieve>
+		<os:store doc:name="Store Service Host &amp; Port" doc:id="fbebbb91-3c9d-45c9-a51b-4b109b37fb77" key="serviceRegistry" objectStore="ServiceRegistry">
+			<os:value ><![CDATA[#[output application/json --- 
+vars.serviceRegistry + payload]]]></os:value>
+		</os:store>
+		<ee:transform doc:name="Set response" doc:id="ef06e034-9e93-446c-81ab-3e2db224b06d">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-  response: "User created!"
+	"message" : "Service Registered!"
 }]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
+			</ee:message>
+		</ee:transform>
+	</flow>
 </mule>

@@ -11,6 +11,16 @@ title: insurance-gateway
                  {
                    "availableThreads" : 5
                  } 
+/register:
+   post: 
+    responses:
+      200: 
+        body:
+          application/json: 
+            example:             
+                 {
+                   "message" : "service Registered!"
+                 } 
 /users: 
   get: 
     responses:
